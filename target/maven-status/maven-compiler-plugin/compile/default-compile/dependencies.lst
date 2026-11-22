@@ -1,5 +1,0 @@
-classpath:C:\Users\Asus\.m2\repository\org\postgresql\postgresql\42.7.3\postgresql-42.7.3.jar	1089312:1710441706000
-classpath:C:\Users\Asus\.m2\repository\com\zaxxer\HikariCP\5.1.0\HikariCP-5.1.0.jar	161840:1699102053000
-classpath:C:\Users\Asus\.m2\repository\org\slf4j\slf4j-api\2.0.13\slf4j-api-2.0.13.jar	68605:1712931843000
-classpath:C:\Users\Asus\.m2\repository\ch\qos\logback\logback-classic\1.5.6\logback-classic-1.5.6.jar	293697:1713375779000
-classpath:C:\Users\Asus\.m2\repository\ch\qos\logback\logback-core\1.5.6\logback-core-1.5.6.jar	609942:1713375735000
