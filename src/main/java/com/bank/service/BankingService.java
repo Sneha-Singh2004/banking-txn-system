@@ -44,7 +44,6 @@ public class BankingService {
             try {
                 return executeAtomic(req, startTime, attempt);
             } catch (SQLException e) {
-                // 40P01 = PostgreSQL Deadlock Detected, 40001 = Serialization Failure
                 if (("40P01".equals(e.getSQLState()) || "40001".equals(e.getSQLState())) && attempt < MAX_RETRIES) {
                     try {
                         Thread.sleep(10L * attempt);
@@ -72,6 +71,13 @@ public class BankingService {
                     throw new DuplicateTransactionException("Duplicate transaction ID: " + req.getTransactionId());
                 }
 
+                // Acquire exclusive FOR UPDATE row locks on account(s) BEFORE inserting FK rows into "transaction"
+                BigDecimal updatedBalance = switch (req.getType()) {
+                    case DEPOSIT -> handleDeposit(conn, req);
+                    case WITHDRAWAL -> handleWithdrawal(conn, req);
+                    case TRANSFER -> handleTransfer(conn, req);
+                };
+
                 Transaction txn = new Transaction(
                         req.getTransactionId(),
                         req.getType(),
@@ -79,18 +85,11 @@ public class BankingService {
                         req.getSourceAccount(),
                         req.getDestAccount(),
                         req.getChannel(),
-                        TransactionStatus.PENDING,
-                        null
+                        TransactionStatus.SUCCESS,
+                        "Completed successfully"
                 );
                 txnRepo.insert(conn, txn);
 
-                BigDecimal updatedBalance = switch (req.getType()) {
-                    case DEPOSIT -> handleDeposit(conn, req);
-                    case WITHDRAWAL -> handleWithdrawal(conn, req);
-                    case TRANSFER -> handleTransfer(conn, req);
-                };
-
-                txnRepo.updateStatus(conn, req.getTransactionId(), TransactionStatus.SUCCESS, "Completed successfully");
                 int duration = (int) (System.currentTimeMillis() - startTime);
                 auditRepo.logAudit(conn, req.getTransactionId(), req.getType().name(), "SUCCESS", duration, "Attempt=" + attempt);
 
@@ -137,7 +136,6 @@ public class BankingService {
         String srcId = req.getSourceAccount();
         String dstId = req.getDestAccount();
 
-        // Canonical Lock Ordering to prevent Deadlocks
         String firstLockId = srcId.compareTo(dstId) < 0 ? srcId : dstId;
         String secondLockId = srcId.compareTo(dstId) < 0 ? dstId : srcId;
 
