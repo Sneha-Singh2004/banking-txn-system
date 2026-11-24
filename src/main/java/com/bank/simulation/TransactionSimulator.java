@@ -19,6 +19,9 @@ import java.util.concurrent.*;
 
 public class TransactionSimulator {
 
+    private static final int TOTAL_TRANSFERS = 50_000;
+    private static final int THREAD_POOL_SIZE = 20;
+
     private final BankingService bankingService;
     private final AccountRepository accountRepo;
 
@@ -51,14 +54,15 @@ public class TransactionSimulator {
                         new BigDecimal("9999999.00"), "ACC1002", null, "UPI"));
         System.out.println("Insufficient Funds Result: " + lowBal);
 
-        System.out.println("\n=== 2. Concurrent Bidirectional Deadlock Stress Test (50 Transfers, 20 Threads) ===");
+        System.out.printf("%n=== 2. High-Volume Concurrency Benchmark (%d Transfers, %d Threads) ===%n",
+                TOTAL_TRANSFERS, THREAD_POOL_SIZE);
         BigDecimal beforeTotal = getCombinedBalance("ACC1001", "ACC1002");
         System.out.println("Combined Balance Before (ACC1001 + ACC1002): " + beforeTotal);
 
-        ExecutorService executor = Executors.newFixedThreadPool(20);
-        List<Callable<TransactionResult>> tasks = new ArrayList<>();
+        ExecutorService executor = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
+        List<Callable<TransactionResult>> tasks = new ArrayList<>(TOTAL_TRANSFERS);
 
-        for (int i = 1; i <= 50; i++) {
+        for (int i = 1; i <= TOTAL_TRANSFERS; i++) {
             final int idx = i;
             boolean forward = (i % 2 == 0);
             String src = forward ? "ACC1001" : "ACC1002";
@@ -66,7 +70,7 @@ public class TransactionSimulator {
 
             tasks.add(() -> bankingService.processTransaction(
                     new TransactionRequest("TXN-" + runTag + "-CONC-" + idx,
-                            TransactionType.TRANSFER, new BigDecimal("100.00"), src, dst, "UPI")
+                            TransactionType.TRANSFER, new BigDecimal("10.00"), src, dst, "UPI")
             ));
         }
 
@@ -80,10 +84,12 @@ public class TransactionSimulator {
                 successCount++;
             }
         }
-        long elapsed = System.currentTimeMillis() - start;
+        long elapsedMs = System.currentTimeMillis() - start;
+        double throughputTps = (successCount * 1000.0) / Math.max(elapsedMs, 1);
 
         BigDecimal afterTotal = getCombinedBalance("ACC1001", "ACC1002");
-        System.out.printf("Completed %d/50 concurrent transfers in %d ms%n", successCount, elapsed);
+        System.out.printf("Completed %d/%d concurrent transfers in %d ms (%.2f TPS)%n",
+                successCount, TOTAL_TRANSFERS, elapsedMs, throughputTps);
         System.out.println("Combined Balance After  (ACC1001 + ACC1002): " + afterTotal);
         System.out.println("Money Conservation Verified: " + (beforeTotal.compareTo(afterTotal) == 0));
 
