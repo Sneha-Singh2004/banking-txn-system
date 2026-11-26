@@ -7,7 +7,6 @@ import com.bank.exception.InvalidAmountException;
 import com.bank.model.TransactionStatus;
 import com.bank.model.TransactionType;
 import com.bank.repository.AccountRepository;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -38,11 +37,6 @@ class BankingServiceTest {
         bankingService = new BankingService();
         accountRepo = new AccountRepository();
         runTag = UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-    }
-
-    @AfterAll
-    static void tearDownSuite() {
-        DataSourceConfig.close();
     }
 
     private BigDecimal fetchBalance(String accountId) throws Exception {
